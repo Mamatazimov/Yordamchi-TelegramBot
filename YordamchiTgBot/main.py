@@ -4,8 +4,7 @@ from os import getenv
 
 import requests
 
-
-from dotenv import load_dotenv
+from dynaconf import settings
 from datetime import datetime
 from aiogram import Bot, Dispatcher, types
 from aiogram.client.default import DefaultBotProperties
@@ -18,12 +17,12 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
 
-load_dotenv()
 
-token = getenv("Token")
+
+token = settings.TOKEN
 # Dispacher va Bot
 dp = Dispatcher()
-bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML) )
+bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML) )
 
 # Malumotlar bazasini chaqirish
 conn = sqlite3.connect("users_list.db", check_same_thread=False)
@@ -43,7 +42,7 @@ conn.commit()
 scheduler_sig = AsyncIOScheduler()
 
 
-ex_api = getenv("ex_api")
+ex_api = settings.EX_API
 # Valyuta kurslarini api orqali funksiyaga yuklash
 def get_exchange( symbols="USD,UZS,RUB"):
 
