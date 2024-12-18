@@ -127,7 +127,9 @@ async def ex_button(callback_query: types.CallbackQuery):
 
 
 
+  
 
+  
 
 # Exchange hisoblash
 @dp.callback_query(lambda c: c.data in ["ex_usd_rub","ex_uzs_rub","ex_uzs_usd","back_main_menu_ex"])
