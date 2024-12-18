@@ -6,7 +6,7 @@ import requests
 
 from dynaconf import settings
 from datetime import datetime
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
@@ -63,18 +63,20 @@ class SharedContext:
 
 context_list = SharedContext()
 context_reg = SharedContext()
+context_ex = SharedContext()
 
 class Kv_equation_class(StatesGroup):
     waiting_abc = State()
-
 
 class ReminderStates(StatesGroup):
     waiting_for_text = State()
     waiting_for_time = State()
 
-    # builder tugmalarii
-
-
+class Ex_states(StatesGroup):
+    ex_usd_rub = State()
+    ex_uzs_usd = State()
+    ex_uzs_rub = State()
+# builder tugmalarii
 builder = InlineKeyboardBuilder()
 
 builder.row(
@@ -89,16 +91,29 @@ builder.row(
 builder_keyboard = builder.as_markup()
 
 
+
+
 # start kamanda
 @dp.message(CommandStart())
 async def main_menu(message: Message):
     await message.reply("Hush kelibsiz!\nMen sizga har xil yo'nalishlarda biroz yordam berish uchun yaratilganman.\nQuyidagilardan birini tanlashingiz mumkin...", reply_markup=builder_keyboard)
+
+
+
 
 # Exchange
 @dp.callback_query(lambda c: c.data == "button_1")
 async def ex_button(callback_query: types.CallbackQuery):
     await callback_query.answer("Valyuta narxlari")
     rates = get_exchange()
+    # ex_keyboard
+    ex_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Hisoblash: RUB va USD", callback_data="ex_usd_rub"),
+        InlineKeyboardButton(text="Hisoblash: UZS va RUB", callback_data="ex_uzs_rub")],
+        [InlineKeyboardButton(text="Hisoblash: UZS va USD", callback_data="ex_uzs_usd")],
+        [InlineKeyboardButton(text="Asosiy menu", callback_data="back_main_menu_ex")]
+    ])
+    context_ex.value = ex_keyboard
 
     if 'error' in rates:
         await bot.send_message(callback_query.from_user.id, rates["error"])
@@ -107,7 +122,106 @@ async def ex_button(callback_query: types.CallbackQuery):
 
         for currency, rate in rates["rates"].items():
             rates_message += f"{currency}: {rate}\n"
-        await bot.send_message(callback_query.from_user.id, rates_message)
+        await bot.send_message(callback_query.from_user.id, rates_message, reply_markup=ex_keyboard)
+
+
+
+
+
+
+# Exchange hisoblash
+@dp.callback_query(lambda c: c.data in ["ex_usd_rub","ex_uzs_rub","ex_uzs_usd","back_main_menu_ex"])
+async def ex_question(callback_query : types.CallbackQuery, state: FSMContext ):
+    await callback_query.answer("Hisoblash")
+    ex_keyboard = context_ex.value
+
+    if callback_query.data == "ex_usd_rub":
+        await callback_query.message.answer("Miqdorni kiritib oxiriga valyuta nomini kiriting\nNamuna: 12usd")
+        await state.set_state(Ex_states.ex_usd_rub) 
+    elif callback_query.data == "ex_uzs_usd":
+        await callback_query.message.answer("Miqdorni kiritib oxiriga valyuta nomini kiriting\nNamuna: 12usd")
+        await state.set_state(Ex_states.ex_uzs_usd)
+    elif callback_query.data == "ex_uzs_rub":
+        await callback_query.message.answer("Miqdorni kiritib oxiriga valyuta nomini kiriting\nNamuna: 12usd")
+        await state.set_state(Ex_states.ex_uzs_rub)
+    elif callback_query.data == "back_main_menu_ex" :
+        await callback_query.message.edit_text("Hush kelibsiz!\nMen sizga har xil yo'nalishlarda biroz yordam berish uchun yaratilganman.\nQuyidagilardan birini tanlashingiz mumkin...", reply_markup=builder_keyboard)
+
+
+
+rates_ex = get_exchange()
+rub = rates_ex["rates"]["RUB"]
+uzs = rates_ex["rates"]["UZS"]
+usd = rates_ex["rates"]["USD"]
+
+
+@dp.message(Ex_states.ex_usd_rub)
+async def ex_calculate(message: Message, state: FSMContext):
+    current_state = await state.get_state()
+    await state.update_data(ex_prince=message.text)
+    ex_prince = str(message.text)
+    ex_text_fiat = str(ex_prince[-3:])
+    if  ex_text_fiat == "usd":
+        ex_prince = ex_prince[0:-3:]
+        qiymat = int(ex_prince)
+        javob = qiymat*int(rub)
+        javob = round(javob,2)
+        await message.answer(f"{javob} rub")
+    elif  ex_text_fiat == "rub":
+        ex_prince = ex_prince[0:-3:]
+        qiymat = int(ex_prince)
+        javob = qiymat/int(rub)
+        javob = round(javob,2)
+        await message.answer(f"{javob} usd")
+    else:
+        await message.answer("Xatolik")
+
+
+
+@dp.message(Ex_states.ex_uzs_rub)
+async def ex_calculate(message: Message, state: FSMContext):
+    current_state = await state.get_state()
+    await state.update_data(ex_prince=message.text)
+    ex_prince = str(message.text)
+    ex_text_fiat = str(ex_prince[-3:])
+    if  ex_text_fiat == "uzs":
+        ex_prince = ex_prince[0:-3:]
+        qiymat = int(ex_prince)
+        javob = qiymat/int(uzs)*int(rub)
+        javob = round(javob,2)
+        await message.answer(f"{javob} rub")
+    elif  ex_text_fiat == "rub":
+        ex_prince = ex_prince[0:-3:]
+        qiymat = int(ex_prince)
+        javob = qiymat/int(rub)*int(uzs)
+        javob = round(javob,2)
+        await message.answer(f"{javob} uzs")
+    else:
+        await message.answer("Xatolik")
+
+
+@dp.message(Ex_states.ex_uzs_usd)
+async def ex_calculate(message: Message, state: FSMContext):
+    current_state = await state.get_state()
+    await state.update_data(ex_prince=message.text)
+    ex_prince = str(message.text)
+    ex_text_fiat = str(ex_prince[-3:])
+    if  ex_text_fiat == "uzs":
+        ex_prince = ex_prince[0:-3:]
+        qiymat = int(ex_prince)
+        javob = qiymat/int(uzs)
+        javob = round(javob,2)
+        await message.answer(f"{javob} usd")
+    elif  ex_text_fiat == "usd":
+        ex_prince = ex_prince[0:-3:]
+        qiymat = int(ex_prince)
+        javob = qiymat*int(uzs)
+        javob = round(javob,2)
+        await message.answer(f"{javob} uzs")
+    else:
+        await message.answer("Xatolik")
+
+
 
 # Royhat button funksiya
 @dp.callback_query(lambda c: c.data == "button_2")
@@ -122,8 +236,6 @@ async def royhat_keyboard(callback_query: types.CallbackQuery):
     context_list.value = roy_keyboard
     await callback_query.message.edit_text("Quyidagilardan birini tanlang:", reply_markup=roy_keyboard)
     
-
-
 
 # list
 @dp.callback_query(lambda c: c.data in ["view_list", "add_item", "clear_list","back_main_menu"])
