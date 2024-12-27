@@ -401,16 +401,19 @@ async def Kv_equation_calculating(message: types.Message, state: FSMContext):
         list_value_abc = value_abc.strip(" ").split()
         value_a , value_b , value_c = map(int, list_value_abc)
         diskreminat = (value_b**2)-(4*value_c*value_a)
-        diskreminat_ildiz_osti = diskreminat**(1/2)
-        if diskreminat_ildiz_osti > 0:
-            x_1 = (-value_b-diskreminat_ildiz_osti)/(2*value_a)
-            x_2 = (-value_b+diskreminat_ildiz_osti)/(2*value_a)
-            await message.answer(f"Tenglamani yechimlari: {x_1} , {x_2}", reply_markup=kv_tenglama_kybrd)
-        elif diskreminat_ildiz_osti == 0:
-            x = -value_b/(2*value_a)
-            await message.answer(f"Tenglama bitta yechimga ega bo'ldi:{x}", reply_markup=kv_tenglama_kybrd)
-        elif diskreminat_ildiz_osti < 0:
-            await message.answer("Tenglama yechimga ega emas", reply_markup=kv_tenglama_kybrd)
+        if diskreminat < 0:
+            value_a*=2
+            await message.answer(f"Javob diskreminat minusdan chiqgani uchun:\n(-{value_a} ± i√{diskreminat})/{value_a}", reply_markup=kv_tenglama_kybrd)
+        else:
+            diskreminat_ildiz_osti = diskreminat**(1/2)
+            if diskreminat_ildiz_osti > 0:
+                x_1 = (-value_b-diskreminat_ildiz_osti)/(2*value_a)
+                x_2 = (-value_b+diskreminat_ildiz_osti)/(2*value_a)
+                await message.answer(f"Tenglamani yechimlari: {x_1} , {x_2}", reply_markup=kv_tenglama_kybrd)
+            elif diskreminat_ildiz_osti == 0:
+                x = -value_b/(2*value_a)
+                await message.answer(f"Tenglama bitta yechimga ega bo'ldi:{x}", reply_markup=kv_tenglama_kybrd)
+
     except ValueError:
         await message.answer("Noto'gri qiymat kiritdingiz.Iltimos to'g'ri qiymat kiriting.\nEslatma: Agar (a) qiymatingiz yo'q bo'lsa uni 1,(b) qiymatingiz yo'q bo'lsa 1 yoki (c) qiymatingiz yo'q bo'lsa uni 0 deb belgilang!!!\nDasturchi:'Ushbu xatoliklarni to\'g\'irlashim mumkin edi, lekin erindim:)'", reply_markup=kv_tenglama_kybrd)
     except TypeError:
